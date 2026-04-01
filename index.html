@@ -3,159 +3,652 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/n5ro/aframe-physics-system@v4.0.1/dist/aframe-physics-system.js"></script>
-    <script src="https://unpkg.com/aframe-event-set-component@5.x.x/dist/aframe-event-set-component.min.js"></script>
-<style>
-        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
+    <title>Fireline Rescue</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <style>
+        :root {
+            --bg: #08131f;
+            --panel: rgba(8, 19, 31, 0.78);
+            --line: rgba(133, 214, 255, 0.28);
+            --text: #eef7ff;
+            --muted: #a0b8ca;
+            --accent: #7bf2ff;
+            --danger: #ff7a59;
+            --success: #8cff8b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at top, rgba(76, 130, 255, 0.18), transparent 35%),
+                linear-gradient(180deg, #07111b 0%, #0d1b2b 42%, #08131f 100%);
+            color: var(--text);
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        #overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 18px;
+            z-index: 20;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .panel {
+            pointer-events: none;
+            max-width: 380px;
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+        }
+
+        .panel h1 {
+            margin: 0 0 10px;
+            font-size: 24px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .panel p {
+            margin: 0;
+            line-height: 1.45;
+            color: var(--muted);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(118px, 1fr));
+            gap: 10px;
+            min-width: 280px;
+        }
+
+        .stat {
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .stat-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .bottombar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+        }
+
+        #message {
+            max-width: 480px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: rgba(7, 17, 27, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        .controls {
+            pointer-events: auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 18px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #08131f;
+            cursor: pointer;
+            background: linear-gradient(135deg, #7bf2ff 0%, #b3ffcf 100%);
+            box-shadow: 0 12px 30px rgba(123, 242, 255, 0.25);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 36px rgba(123, 242, 255, 0.3);
+        }
+
+        button.secondary {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: none;
+        }
+
+        .accent {
+            color: var(--accent);
+        }
+
+        .danger {
+            color: var(--danger);
+        }
+
+        .success {
+            color: var(--success);
+        }
+
+        @media (max-width: 860px) {
+            #overlay {
+                padding: 12px;
+            }
+
+            .topbar,
+            .bottombar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .stats {
+                min-width: 0;
+            }
+
+            .controls {
+                justify-content: stretch;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-    <a-scene physics="debug: false;" background="color: #87CEEB">
+    <div id="overlay">
+        <div class="topbar">
+            <div class="panel">
+                <h1>Fireline Rescue</h1>
+                <p>Туши огненные шары кликом. Кот даёт <span class="accent">+3 очка</span> и <span class="accent">+2 секунды</span>. Если огонь доберётся до базы, ты потеряешь жизнь.</p>
+            </div>
 
+            <div class="stats panel">
+                <div class="stat">
+                    <span class="stat-label">Очки</span>
+                    <span id="score" class="stat-value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Цель</span>
+                    <span id="goal" class="stat-value">20</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Время</span>
+                    <span id="time" class="stat-value">40</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Жизни</span>
+                    <span id="lives" class="stat-value">3</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottombar">
+            <div id="message">Нажми «Старт», потом кликай по целям в сцене. Хорошие выстрелы гасят огонь, а коты приносят бонус.</div>
+            <div class="controls">
+                <button id="start-button">Старт</button>
+                <button id="restart-button" class="secondary">Рестарт</button>
+            </div>
+        </div>
+    </div>
+
+    <a-scene renderer="colorManagement: true; physicallyCorrectLights: true" background="color: #08131f">
         <a-assets>
             <img id="cat" src="cat-laughing-4.jpg">
-   
             <img id="ground-texture" src="OIP (2).webp">
             <img id="sky-texture" src="R.jpg">
             <img id="fire" src="fire.webp">
-            
-            <a-asset-item id="model" src="new.glb"></a-asset-item>
-            <audio id="buzz-sound" src="buzzer-meme-sound.mp3" preload="auto" crossorigin="anonymous"></audio>
-
-            <audio id="sound" src="cat-laughing.mp3" preload="auto" crossorigin="anonymous"></audio>
-           
+            <audio id="alarm-sound" src="buzzer-meme-sound.mp3" preload="auto" crossorigin="anonymous"></audio>
+            <audio id="bonus-sound" src="cat-laughing.mp3" preload="auto" crossorigin="anonymous"></audio>
         </a-assets>
 
         <a-sky src="#sky-texture" rotation="0 -90 0"></a-sky>
+        <a-entity light="type: ambient; intensity: 0.75; color: #9fdcff"></a-entity>
+        <a-entity light="type: directional; intensity: 1.1; color: #ffffff" position="-2 5 3"></a-entity>
+        <a-entity light="type: point; intensity: 1.4; color: #ff8055; distance: 20" position="0 1.3 -3"></a-entity>
 
-        <a-light type="directional" position="2 5 3" intensity="1" castshadow="true"></a-light>
+        <a-plane src="#ground-texture"
+                 rotation="-90 0 0"
+                 width="36"
+                 height="36"
+                 repeat="12 12"
+                 material="roughness: 0.95; metalness: 0.05; opacity: 0.92">
+        </a-plane>
 
-        <a-plane id="ground" src="#ground-texture" rotation="-90 0 0" width="30" height="30" repeat="10 10" static-body class="ground" material="roughness:0.8; metalness:0.2"></a-plane>
+        <a-cylinder position="0 0.35 -3"
+                    radius="2.8"
+                    height="0.7"
+                    color="#16283c"
+                    material="emissive: #08131f; emissiveIntensity: 0.2">
+        </a-cylinder>
 
-        <a-image src="#fire" position="-5 1 0" scale="2 1 0.1" rotation="0 90 0" transparent="true"></a-image>
+        <a-ring position="0 0.72 -3"
+                rotation="-90 0 0"
+                radius-inner="2.6"
+                radius-outer="3.2"
+                color="#7bf2ff"
+                material="shader: flat; opacity: 0.85">
+        </a-ring>
 
-        
-        <a-entity scale="0.5 0.5 0.5" id="parent-group" position="0 1 0" >
-            <a-entity gltf-model="#model" id="mod" scale="0.5 0.5 0.5" position="10 0 0" animation="property: position; to: -10 0 0; dur: 4000; easing: linear" ></a-entity>
+        <a-entity id="lane-guides">
+            <a-plane position="-4.8 1.1 -10" width="0.04" height="5.5" color="#7bf2ff" material="shader: flat; opacity: 0.35"></a-plane>
+            <a-plane position="-2.4 1.1 -10" width="0.04" height="5.5" color="#7bf2ff" material="shader: flat; opacity: 0.18"></a-plane>
+            <a-plane position="0 1.1 -10" width="0.04" height="5.5" color="#7bf2ff" material="shader: flat; opacity: 0.18"></a-plane>
+            <a-plane position="2.4 1.1 -10" width="0.04" height="5.5" color="#7bf2ff" material="shader: flat; opacity: 0.18"></a-plane>
+            <a-plane position="4.8 1.1 -10" width="0.04" height="5.5" color="#7bf2ff" material="shader: flat; opacity: 0.35"></a-plane>
         </a-entity>
-        
-        <a-entity id="game-config" data-win-score="8"></a-entity>
-        
-        <a-box dynamic-body="mass: 1; shape: box" position="0 3 -5"></a-box>
- 
-        <a-box position="0 0 3" static-body width="0.4" height="3">
-            <a-circle id="button" class="clickable" position="0 1.3 0.51" radius="0.1" color="#f00"
-                            event-set__enter="_event: mouseenter; color: #faa"
-                            event-set__leave="_event: mouseleave; color: #f00"
-                            event-set__click="_event: mousedown; color: #a00"
-                            event-set__unclick="_event: mouseup; color: #faa"></a-circle>
 
-        </a-box>
+        <a-entity id="arena-labels">
+            <a-text value="БАЗА" position="0 2.8 -4.5" align="center" color="#d7f7ff" width="9"></a-text>
+            <a-text value="Огонь: +1 очко" position="-5.2 4.25 -8.5" align="left" color="#ffb49e" width="8"></a-text>
+            <a-text value="Кот: +3 очка и +2 сек" position="-5.2 3.7 -8.5" align="left" color="#98ffd5" width="8"></a-text>
+        </a-entity>
 
+        <a-entity id="target-layer"></a-entity>
 
-        <a-camera  id="camera" wasd-controls="fly: false; acceleration: 400" position="0 1.6 5">
-            <a-text id="score-text" value="0" position="-1.5 0.7 -1" scale="0.5 0.5 0.5" color="yellow" ></a-text>
-            <a-text id="status-text" value="" visible="false" position="0 0.35 -1" align="center" scale="0.8 0.8 0.8" color="white"></a-text>
-            <a-sound src="#buzz-sound" id="buzz" volume="0.05"></a-sound>
- 
-            <a-sound src="#sound" id="gameoversound" volume="0.3"></a-sound>
-            <a-image src="#cat" id="gameoverimage" visible="false" position="0 0 -0.55" scale="2 1 0.1" transparent="true"></a-image>
-
-            <a-cursor cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-cursor>
+        <a-camera id="camera" position="0 1.65 7" look-controls="enabled: false">
+            <a-cursor id="cursor"
+                      color="#ffffff"
+                      raycaster="objects: .interactive"
+                      cursor="rayOrigin: mouse">
+            </a-cursor>
+            <a-sound id="alarm" src="#alarm-sound" volume="0.22"></a-sound>
+            <a-sound id="bonus" src="#bonus-sound" volume="0.18"></a-sound>
         </a-camera>
-
-
-        <script>
-                (function() {
-                const scene = document.querySelector('a-scene');
-                    scene.addEventListener('loaded', function initGame() {
-                        const gameConfig = document.getElementById('game-config');
-                        const buzz = document.getElementById('buzz');
-                        const button = document.getElementById('button');
-                        const model = document.getElementById('mod');
-                        const scoreText = document.getElementById('score-text');
-                        const statusText = document.getElementById('status-text');
-                        const winScore = gameConfig ? Number(gameConfig.dataset.winScore) || 8 : 8;
-
-                        let gameOverImage = document.getElementById('gameoverimage');
-                        let gameOverSound = document.getElementById('gameoversound');
-
-
-                        let score = 0;
-                        let gameActive = true;
-
-                        function updateScoreDisplay() {
-                            scoreText.setAttribute('value', score.toString());
-                        }
-
-                        function playOneShotSound(soundEl) {
-                            const soundComponent = soundEl && soundEl.components && soundEl.components.sound;
-                            if (!soundComponent) {
-                                return;
-                            }
-
-                            soundComponent.stopSound();
-                            soundComponent.playSound();
-                        }
-
-                        function resetModel() {
-                            model.removeAttribute('animation');
-                            model.setAttribute('position', '10 0 0');
-                            model.setAttribute('animation', {
-                                property: 'position',
-                                to: '-10 0 0',
-                                dur: 4000,
-                                easing: 'linear'
-                            });
-                        }
-
-            
-                        function finishGame(message, color, showGameOverImage) {
-                            if (gameActive) {
-                                gameActive = false;
-                                statusText.setAttribute('value', message);
-                                statusText.setAttribute('color', color);
-                                statusText.setAttribute('visible', 'true');
-                                gameOverImage.setAttribute('visible', showGameOverImage ? 'true' : 'false');
-                                model.removeAttribute('animation');
-                            }
-                        }
-
-                        function gameOver() {
-                            finishGame('Игра окончена', '#ffffff', true);
-                            playOneShotSound(gameOverSound);
-                        }
-
-                        function winGame() {
-                            finishGame('Победа!', '#7CFC00', false);
-                        }
-
-
-                        button.addEventListener('click', function onClick() {
-                            if (!gameActive) return;          
-                            score++;                           
-                            updateScoreDisplay();
-                            playOneShotSound(buzz);
-
-                            if (score >= winScore) {
-                                winGame();
-                                return;
-                            }
-
-                            resetModel();
-                        });
-
-                        model.addEventListener('animationcomplete', function onAnimationComplete() {
-                            gameOver();                         
-                        });
-
-                        updateScoreDisplay();
-                    });
-            })();
-            
-            
-        </script>
     </a-scene>
+
+    <script>
+        (function () {
+            const config = {
+                initialLives: 3,
+                initialTime: 40,
+                goal: 20,
+                spawnDelayMin: 480,
+                spawnDelayMax: 1180,
+                fireChance: 0.76,
+                bonusTime: 2,
+                catPoints: 3,
+                firePoints: 1
+            };
+
+            const scoreEl = document.getElementById('score');
+            const goalEl = document.getElementById('goal');
+            const timeEl = document.getElementById('time');
+            const livesEl = document.getElementById('lives');
+            const messageEl = document.getElementById('message');
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
+            const targetLayer = document.getElementById('target-layer');
+            const alarm = document.getElementById('alarm');
+            const bonus = document.getElementById('bonus');
+
+            const lanes = [-4.8, -2.4, 0, 2.4, 4.8];
+            const targets = [];
+            let spawnTimeoutId = null;
+            let animationFrameId = null;
+            let lastFrameTime = 0;
+            let gameState = createInitialState();
+
+            goalEl.textContent = String(config.goal);
+            updateHud();
+
+            startButton.addEventListener('click', function () {
+                if (!gameState.running) {
+                    startGame();
+                }
+            });
+
+            restartButton.addEventListener('click', function () {
+                resetGame();
+                startGame();
+            });
+
+            function createInitialState() {
+                return {
+                    running: false,
+                    score: 0,
+                    lives: config.initialLives,
+                    timeLeft: config.initialTime,
+                    ended: false,
+                    spawnCount: 0
+                };
+            }
+
+            function updateHud() {
+                scoreEl.textContent = String(gameState.score);
+                livesEl.textContent = String(Math.max(0, gameState.lives));
+                timeEl.textContent = String(Math.max(0, Math.ceil(gameState.timeLeft)));
+            }
+
+            function setMessage(text, tone) {
+                messageEl.textContent = text;
+                messageEl.className = '';
+
+                if (tone) {
+                    messageEl.classList.add(tone);
+                }
+            }
+
+            function startGame() {
+                clearGameObjects();
+                gameState = createInitialState();
+                gameState.running = true;
+                lastFrameTime = 0;
+                updateHud();
+                startButton.textContent = 'Идёт игра';
+                setMessage('Туши огонь до того, как он доберётся до базы. Кот в сцене даёт бонусные очки и время.', '');
+                scheduleNextSpawn();
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+
+            function resetGame() {
+                cancelScheduledWork();
+                clearGameObjects();
+                gameState = createInitialState();
+                updateHud();
+                startButton.textContent = 'Старт';
+                setMessage('Игра сброшена. Нажми «Старт», чтобы начать новую волну.', '');
+            }
+
+            function endGame(win) {
+                if (gameState.ended) {
+                    return;
+                }
+
+                gameState.running = false;
+                gameState.ended = true;
+                cancelScheduledWork();
+                updateHud();
+                startButton.textContent = 'Старт заново';
+
+                if (win) {
+                    playOneShot(bonus);
+                    setMessage('Победа. База спасена, а план по очкам выполнен.', 'success');
+                } else if (gameState.lives <= 0) {
+                    playOneShot(alarm);
+                    setMessage('Поражение. Огонь прорвался к базе.', 'danger');
+                } else {
+                    playOneShot(alarm);
+                    setMessage('Время вышло. Для победы нужно было набрать ещё немного очков.', 'danger');
+                }
+            }
+
+            function scheduleNextSpawn() {
+                if (!gameState.running) {
+                    return;
+                }
+
+                const progress = 1 - (gameState.timeLeft / config.initialTime);
+                const minDelay = Math.max(240, config.spawnDelayMin - progress * 140);
+                const maxDelay = Math.max(minDelay + 80, config.spawnDelayMax - progress * 220);
+                const nextDelay = randomBetween(minDelay, maxDelay);
+
+                spawnTimeoutId = window.setTimeout(function () {
+                    spawnTarget();
+                    scheduleNextSpawn();
+                }, nextDelay);
+            }
+
+            function spawnTarget() {
+                if (!gameState.running) {
+                    return;
+                }
+
+                const kind = Math.random() < config.fireChance ? 'fire' : 'cat';
+                const entity = document.createElement('a-entity');
+                const laneX = lanes[Math.floor(Math.random() * lanes.length)];
+                const startY = randomBetween(1.1, 4.5);
+                const startZ = randomBetween(-20.5, -16.5);
+                const wobbleAmplitude = randomBetween(0.12, 0.5);
+                const wobbleSpeed = randomBetween(1.4, 2.5);
+                const progress = 1 - (gameState.timeLeft / config.initialTime);
+                const speed = kind === 'fire'
+                    ? randomBetween(5.2, 7.6) + progress * 1.8
+                    : randomBetween(4.5, 6.2) + progress * 1.1;
+                const baseScale = kind === 'fire' ? 1.2 : 1.05;
+                const phase = Math.random() * Math.PI * 2;
+
+                entity.classList.add('interactive');
+                entity.setAttribute('position', laneX + ' ' + startY + ' ' + startZ);
+                entity.setAttribute('material', 'transparent: true; alphaTest: 0.2; shader: standard; side: double');
+
+                if (kind === 'fire') {
+                    entity.setAttribute('geometry', 'primitive: plane; width: 1.6; height: 1.6');
+                    entity.setAttribute('material', 'src: #fire; transparent: true; alphaTest: 0.1; emissive: #ff8b4f; emissiveIntensity: 0.7; side: double');
+                } else {
+                    entity.setAttribute('geometry', 'primitive: plane; width: 1.45; height: 1.45');
+                    entity.setAttribute('material', 'src: #cat; transparent: true; alphaTest: 0.2; emissive: #7bf2ff; emissiveIntensity: 0.18; side: double');
+                }
+
+                const halo = document.createElement('a-ring');
+                halo.setAttribute('radius-inner', kind === 'fire' ? '0.76' : '0.7');
+                halo.setAttribute('radius-outer', kind === 'fire' ? '0.95' : '0.88');
+                halo.setAttribute('color', kind === 'fire' ? '#ff8b4f' : '#8cff8b');
+                halo.setAttribute('material', 'shader: flat; opacity: 0.4');
+                halo.setAttribute('position', '0 0 -0.01');
+                entity.appendChild(halo);
+
+                const targetData = {
+                    entity: entity,
+                    kind: kind,
+                    laneX: laneX,
+                    y: startY,
+                    z: startZ,
+                    speed: speed,
+                    wobbleAmplitude: wobbleAmplitude,
+                    wobbleSpeed: wobbleSpeed,
+                    phase: phase,
+                    age: 0,
+                    baseScale: baseScale,
+                    alive: true
+                };
+
+                const clickHandler = function () {
+                    handleTargetHit(targetData);
+                };
+
+                targetData.clickHandler = clickHandler;
+                entity.addEventListener('click', clickHandler);
+                targetLayer.appendChild(entity);
+                targets.push(targetData);
+                gameState.spawnCount += 1;
+            }
+
+            function handleTargetHit(targetData) {
+                if (!gameState.running || !targetData.alive) {
+                    return;
+                }
+
+                targetData.alive = false;
+
+                if (targetData.kind === 'fire') {
+                    gameState.score += config.firePoints;
+                    setMessage('Точное попадание. Огонь погашен.', 'success');
+                } else {
+                    gameState.score += config.catPoints;
+                    gameState.timeLeft = Math.min(config.initialTime + 6, gameState.timeLeft + config.bonusTime);
+                    playOneShot(bonus);
+                    setMessage('Кот спасён. Бонус ко времени и очкам получен.', 'accent');
+                }
+
+                pulseEntity(targetData.entity, targetData.kind === 'fire' ? '#ffb28e' : '#b9ffd5');
+                removeTarget(targetData);
+                updateHud();
+
+                if (gameState.score >= config.goal) {
+                    endGame(true);
+                }
+            }
+
+            function pulseEntity(entity, color) {
+                const flash = document.createElement('a-ring');
+                flash.setAttribute('radius-inner', '0.25');
+                flash.setAttribute('radius-outer', '0.55');
+                flash.setAttribute('color', color);
+                flash.setAttribute('material', 'shader: flat; opacity: 0.9');
+                flash.setAttribute('position', entity.getAttribute('position'));
+                flash.setAttribute('animation', 'property: scale; from: 0.3 0.3 0.3; to: 2 2 2; dur: 260; easing: easeOutQuad');
+                flash.setAttribute('animation__fade', 'property: material.opacity; from: 0.9; to: 0; dur: 260; easing: linear');
+                targetLayer.appendChild(flash);
+
+                window.setTimeout(function () {
+                    if (flash.parentNode) {
+                        flash.parentNode.removeChild(flash);
+                    }
+                }, 320);
+            }
+
+            function removeTarget(targetData) {
+                const index = targets.indexOf(targetData);
+
+                if (index !== -1) {
+                    targets.splice(index, 1);
+                }
+
+                if (targetData.entity) {
+                    targetData.entity.removeEventListener('click', targetData.clickHandler);
+
+                    if (targetData.entity.parentNode) {
+                        targetData.entity.parentNode.removeChild(targetData.entity);
+                    }
+                }
+            }
+
+            function gameLoop(timestamp) {
+                if (!gameState.running) {
+                    return;
+                }
+
+                if (!lastFrameTime) {
+                    lastFrameTime = timestamp;
+                }
+
+                const deltaMs = Math.min(64, timestamp - lastFrameTime);
+                const deltaSeconds = deltaMs / 1000;
+                lastFrameTime = timestamp;
+                gameState.timeLeft -= deltaSeconds;
+
+                for (let index = targets.length - 1; index >= 0; index -= 1) {
+                    const target = targets[index];
+
+                    if (!target.alive) {
+                        continue;
+                    }
+
+                    target.age += deltaSeconds;
+                    target.z += target.speed * deltaSeconds;
+
+                    const x = target.laneX + Math.sin(target.age * target.wobbleSpeed + target.phase) * target.wobbleAmplitude;
+                    const tilt = Math.sin(target.age * 4 + target.phase) * 9;
+                    const depthProgress = Math.max(0, Math.min(1, (target.z + 20) / 22));
+                    const scale = target.baseScale + depthProgress * 0.82;
+
+                    target.entity.setAttribute('position', x + ' ' + target.y + ' ' + target.z);
+                    target.entity.setAttribute('rotation', '0 0 ' + tilt);
+                    target.entity.setAttribute('scale', scale + ' ' + scale + ' ' + scale);
+
+                    if (target.z >= 2.6) {
+                        target.alive = false;
+
+                        if (target.kind === 'fire') {
+                            gameState.lives -= 1;
+                            playOneShot(alarm);
+                            setMessage('Огонь ударил по базе. Осторожнее.', 'danger');
+                        }
+
+                        removeTarget(target);
+                        updateHud();
+
+                        if (gameState.lives <= 0) {
+                            endGame(false);
+                            return;
+                        }
+                    }
+                }
+
+                if (gameState.timeLeft <= 0) {
+                    gameState.timeLeft = 0;
+                    updateHud();
+                    endGame(gameState.score >= config.goal);
+                    return;
+                }
+
+                updateHud();
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+
+            function playOneShot(soundEl) {
+                const soundComponent = soundEl && soundEl.components && soundEl.components.sound;
+
+                if (!soundComponent) {
+                    return;
+                }
+
+                soundComponent.stopSound();
+                soundComponent.playSound();
+            }
+
+            function clearGameObjects() {
+                while (targets.length) {
+                    removeTarget(targets[0]);
+                }
+
+                Array.from(targetLayer.children).forEach(function (child) {
+                    if (child.parentNode) {
+                        child.parentNode.removeChild(child);
+                    }
+                });
+            }
+
+            function cancelScheduledWork() {
+                if (spawnTimeoutId) {
+                    window.clearTimeout(spawnTimeoutId);
+                    spawnTimeoutId = null;
+                }
+
+                if (animationFrameId) {
+                    window.cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+            }
+
+            function randomBetween(min, max) {
+                return min + Math.random() * (max - min);
+            }
+        })();
+    </script>
 </body>
 </html>
