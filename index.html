@@ -80,6 +80,13 @@
             grid-template-columns: repeat(2, minmax(118px, 1fr));
             gap: 10px;
             min-width: 280px;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+
+        .stats.is-hidden {
+            opacity: 0;
+            transform: translateY(-8px);
+            visibility: hidden;
         }
 
         .stat {
@@ -239,7 +246,7 @@
                 <p>Туши огненные шары кликом. Кот даёт <span class="accent">+3 очка</span> и <span class="accent">+2 секунды</span>. Если огонь доберётся до базы, ты потеряешь жизнь.</p>
             </div>
 
-            <div class="stats panel">
+            <div id="stats-panel" class="stats panel">
                 <div class="stat">
                     <span class="stat-label">Очки</span>
                     <span id="score" class="stat-value">0</span>
@@ -358,6 +365,7 @@
             const messageEl = document.getElementById('message');
             const startButton = document.getElementById('start-button');
             const restartButton = document.getElementById('restart-button');
+            const statsPanel = document.getElementById('stats-panel');
             const targetLayer = document.getElementById('target-layer');
             const alarm = document.getElementById('alarm');
             const bonus = document.getElementById('bonus');
@@ -427,6 +435,7 @@
                 gameState.running = true;
                 lastFrameTime = 0;
                 updateHud();
+                setStatsPanelVisible(false);
                 startButton.textContent = 'Идёт игра';
                 setMessage('Туши огонь до того, как он доберётся до базы. Поворачивай телефон, чтобы осматриваться, и кликай по целям.', '');
                 scheduleNextSpawn();
@@ -438,6 +447,7 @@
                 clearGameObjects();
                 gameState = createInitialState();
                 updateHud();
+                setStatsPanelVisible(true);
                 startButton.textContent = 'Старт';
                 setMessage('Игра сброшена. Нажми «Старт», чтобы начать новую волну.', '');
             }
@@ -451,6 +461,7 @@
                 gameState.ended = true;
                 cancelScheduledWork();
                 updateHud();
+                setStatsPanelVisible(true);
                 startButton.textContent = 'Старт заново';
 
                 if (win) {
@@ -709,10 +720,7 @@
             }
 
             async function enableMotionControls() {
-                cameraEl.setAttribute(
-                    'look-controls',
-                    'enabled: true; magicWindowTrackingEnabled: true; touchEnabled: true; mouseEnabled: true'
-                );
+                applyLookControls();
 
                 if (typeof DeviceOrientationEvent === 'undefined') {
                     return false;
@@ -721,6 +729,9 @@
                 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                     try {
                         const permission = await DeviceOrientationEvent.requestPermission();
+                        if (permission === 'granted') {
+                            refreshLookControls();
+                        }
                         return permission === 'granted';
                     } catch (error) {
                         console.warn('Device orientation permission request failed:', error);
@@ -728,11 +739,40 @@
                     }
                 }
 
+                refreshLookControls();
                 return true;
             }
 
             function isMobileDevice() {
                 return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+            }
+
+            function setStatsPanelVisible(visible) {
+                statsPanel.classList.toggle('is-hidden', !visible);
+            }
+
+            function applyLookControls() {
+                cameraEl.setAttribute(
+                    'look-controls',
+                    'enabled: true; magicWindowTrackingEnabled: true; touchEnabled: true; mouseEnabled: true'
+                );
+            }
+
+            function refreshLookControls() {
+                applyLookControls();
+
+                const lookControls = cameraEl.components && cameraEl.components['look-controls'];
+                if (!lookControls) {
+                    return;
+                }
+
+                if (typeof lookControls.pause === 'function') {
+                    lookControls.pause();
+                }
+
+                if (typeof lookControls.play === 'function') {
+                    lookControls.play();
+                }
             }
         })();
     </script>
